@@ -1,0 +1,415 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============ PRODUCT CATALOG ============
+
+model ShedModel {
+  id          String    @id @default(cuid())
+  name        String    // "Classic Gable", "Barn Style", "Lean-To"
+  slug        String    @unique
+  description String?
+  roofStyle   RoofStyle
+
+  // Base pricing (before size/options)
+  basePrice   Decimal   @db.Decimal(10, 2)
+
+  // Metadata
+  isActive    Boolean   @default(true)
+  sortOrder   Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  sizes           ShedModelSize[]
+  sidingOptions   ShedModelSiding[]
+  shingleOptions  ShedModelShingle[]
+  doorOptions     ShedModelDoor[]
+  windowOptions   ShedModelWindow[]
+  previewImages   ShedPreviewImage[]
+  configurations  ShedConfiguration[]
+}
+
+enum RoofStyle {
+  GABLE
+  BARN
+  LEAN_TO
+}
+
+model ShedSize {
+  id            String  @id @default(cuid())
+  widthFeet     Int     // 8, 10, 12, 14, 16
+  depthFeet     Int     // 8, 10, 12, 14, 16, 20
+  heightFeet    Decimal @db.Decimal(4, 1) // Wall height
+  displayName   String  // "8x10", "10x12"
+
+  // Price modifier (added to base)
+  priceModifier Decimal @db.Decimal(10, 2)
+
+  // Constraints
+  maxDoors      Int     @default(2)
+  maxWindows    Int     @default(4)
+
+  // Relations
+  models        ShedModelSize[]
+  configurations ShedConfiguration[]
+}
+
+// Junction table for model-size relationship
+model ShedModelSize {
+  model     ShedModel @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  modelId   String
+  size      ShedSize  @relation(fields: [sizeId], references: [id], onDelete: Cascade)
+  sizeId    String
+
+  @@id([modelId, sizeId])
+}
+
+model SidingOption {
+  id            String   @id @default(cuid())
+  name          String   // "LP SmartSide", "Vinyl", "Cedar"
+  material      String
+  priceModifier Decimal  @db.Decimal(10, 2)
+
+  colors        SidingColor[]
+  models        ShedModelSiding[]
+}
+
+// Junction table
+model ShedModelSiding {
+  model           ShedModel     @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  modelId         String
+  sidingOption    SidingOption  @relation(fields: [sidingOptionId], references: [id], onDelete: Cascade)
+  sidingOptionId  String
+
+  @@id([modelId, sidingOptionId])
+}
+
+model SidingColor {
+  id              String       @id @default(cuid())
+  name            String       // "Barn Red", "Forest Green"
+  hexCode         String       // "#8B0000"
+
+  sidingOption    SidingOption @relation(fields: [sidingOptionId], references: [id], onDelete: Cascade)
+  sidingOptionId  String
+
+  configurations  ShedConfiguration[]
+}
+
+model ShingleOption {
+  id            String   @id @default(cuid())
+  name          String   // "Architectural", "3-Tab"
+  priceModifier Decimal  @db.Decimal(10, 2)
+
+  colors        ShingleColor[]
+  models        ShedModelShingle[]
+}
+
+// Junction table
+model ShedModelShingle {
+  model            ShedModel      @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  modelId          String
+  shingleOption    ShingleOption  @relation(fields: [shingleOptionId], references: [id], onDelete: Cascade)
+  shingleOptionId  String
+
+  @@id([modelId, shingleOptionId])
+}
+
+model ShingleColor {
+  id              String        @id @default(cuid())
+  name            String        // "Charcoal", "Desert Tan"
+  hexCode         String
+
+  shingleOption   ShingleOption @relation(fields: [shingleOptionId], references: [id], onDelete: Cascade)
+  shingleOptionId String
+
+  configurations  ShedConfiguration[]
+}
+
+model DoorOption {
+  id           String   @id @default(cuid())
+  name         String   // "Single Entry", "Double Barn", "Roll-Up"
+  type         DoorType
+  widthInches  Int
+  heightInches Int
+  imageUrl     String?
+  priceEach    Decimal  @db.Decimal(10, 2)
+
+  models       ShedModelDoor[]
+  placements   DoorPlacement[]
+}
+
+enum DoorType {
+  SINGLE_ENTRY
+  DOUBLE_ENTRY
+  BARN_DOOR
+  ROLL_UP
+  SLIDING
+}
+
+// Junction table
+model ShedModelDoor {
+  model        ShedModel   @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  modelId      String
+  doorOption   DoorOption  @relation(fields: [doorOptionId], references: [id], onDelete: Cascade)
+  doorOptionId String
+
+  @@id([modelId, doorOptionId])
+}
+
+model WindowOption {
+  id           String  @id @default(cuid())
+  name         String  // "24x36 Single Hung", "36x48 Slider"
+  widthInches  Int
+  heightInches Int
+  imageUrl     String?
+  priceEach    Decimal @db.Decimal(10, 2)
+
+  models       ShedModelWindow[]
+  placements   WindowPlacement[]
+}
+
+// Junction table
+model ShedModelWindow {
+  model          ShedModel     @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  modelId        String
+  windowOption   WindowOption  @relation(fields: [windowOptionId], references: [id], onDelete: Cascade)
+  windowOptionId String
+
+  @@id([modelId, windowOptionId])
+}
+
+// ============ CONFIGURATION ============
+
+model ShedConfiguration {
+  id              String   @id @default(cuid())
+
+  shedModel       ShedModel    @relation(fields: [shedModelId], references: [id])
+  shedModelId     String
+
+  size            ShedSize     @relation(fields: [sizeId], references: [id])
+  sizeId          String
+
+  sidingColor     SidingColor  @relation(fields: [sidingColorId], references: [id])
+  sidingColorId   String
+
+  shingleColor    ShingleColor @relation(fields: [shingleColorId], references: [id])
+  shingleColorId  String
+
+  // Placed items
+  doors           DoorPlacement[]
+  windows         WindowPlacement[]
+
+  // Calculated total (denormalized for performance)
+  totalPrice      Decimal      @db.Decimal(10, 2)
+
+  // Links
+  cartItem        CartItem?
+  orderItem       OrderItem?
+
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+}
+
+model DoorPlacement {
+  id              String            @id @default(cuid())
+
+  configuration   ShedConfiguration @relation(fields: [configurationId], references: [id], onDelete: Cascade)
+  configurationId String
+
+  doorOption      DoorOption        @relation(fields: [doorOptionId], references: [id])
+  doorOptionId    String
+
+  wall            WallPosition
+  offsetPercent   Decimal           @db.Decimal(5, 2) // 0-100, position along wall
+}
+
+model WindowPlacement {
+  id              String            @id @default(cuid())
+
+  configuration   ShedConfiguration @relation(fields: [configurationId], references: [id], onDelete: Cascade)
+  configurationId String
+
+  windowOption    WindowOption      @relation(fields: [windowOptionId], references: [id])
+  windowOptionId  String
+
+  wall            WallPosition
+  offsetPercent   Decimal           @db.Decimal(5, 2)
+  heightPercent   Decimal           @db.Decimal(5, 2) // Vertical position
+}
+
+enum WallPosition {
+  FRONT
+  BACK
+  LEFT
+  RIGHT
+}
+
+// ============ COMMERCE ============
+
+model Customer {
+  id               String   @id @default(cuid())
+  email            String   @unique
+  firstName        String?
+  lastName         String?
+  phone            String?
+  stripeCustomerId String?  @unique
+
+  addresses        Address[]
+  orders           Order[]
+  cart             Cart?
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model Address {
+  id         String      @id @default(cuid())
+
+  customer   Customer    @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customerId String
+
+  type       AddressType @default(SHIPPING)
+
+  street1    String
+  street2    String?
+  city       String
+  state      String
+  zipCode    String
+  country    String      @default("US")
+  isDefault  Boolean     @default(false)
+
+  orders     Order[]
+}
+
+enum AddressType {
+  SHIPPING
+  BILLING
+}
+
+model Cart {
+  id         String     @id @default(cuid())
+
+  customer   Customer?  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customerId String?    @unique
+
+  sessionId  String?    @unique // For anonymous carts
+
+  items      CartItem[]
+
+  expiresAt  DateTime?
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+}
+
+model CartItem {
+  id              String            @id @default(cuid())
+
+  cart            Cart              @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  cartId          String
+
+  configuration   ShedConfiguration @relation(fields: [configurationId], references: [id])
+  configurationId String            @unique
+
+  quantity        Int               @default(1)
+  unitPrice       Decimal           @db.Decimal(10, 2) // Snapshot of price at add time
+
+  createdAt       DateTime          @default(now())
+}
+
+model Order {
+  id                      String      @id @default(cuid())
+  orderNumber             String      @unique // "SHD-2024-0001"
+
+  customer                Customer    @relation(fields: [customerId], references: [id])
+  customerId              String
+
+  shippingAddress         Address     @relation(fields: [addressId], references: [id])
+  addressId               String
+
+  items                   OrderItem[]
+
+  subtotal                Decimal     @db.Decimal(10, 2)
+  taxAmount               Decimal     @db.Decimal(10, 2)
+  shippingAmount          Decimal     @db.Decimal(10, 2)
+  totalAmount             Decimal     @db.Decimal(10, 2)
+
+  stripePaymentIntentId   String?     @unique
+  stripeCheckoutSessionId String?     @unique
+
+  status                  OrderStatus @default(PENDING)
+  paidAt                  DateTime?
+
+  estimatedDelivery       DateTime?
+  notes                   String?
+
+  createdAt               DateTime    @default(now())
+  updatedAt               DateTime    @updatedAt
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  PROCESSING
+  MANUFACTURING
+  READY_FOR_DELIVERY
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}
+
+model OrderItem {
+  id              String            @id @default(cuid())
+
+  order           Order             @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId         String
+
+  configuration   ShedConfiguration @relation(fields: [configurationId], references: [id])
+  configurationId String            @unique
+
+  quantity        Int
+  unitPrice       Decimal           @db.Decimal(10, 2)
+  description     String            // Denormalized for receipts
+}
+
+// ============ ASSETS ============
+
+model ShedPreviewImage {
+  id          String         @id @default(cuid())
+
+  shedModel   ShedModel      @relation(fields: [shedModelId], references: [id], onDelete: Cascade)
+  shedModelId String
+
+  forWidth    Int?           // null = all sizes
+  forDepth    Int?
+
+  angle       ImageAngle
+  layerType   ImageLayerType
+
+  url         String
+  width       Int
+  height      Int
+
+  createdAt   DateTime       @default(now())
+}
+
+enum ImageAngle {
+  FRONT
+  FRONT_LEFT
+  FRONT_RIGHT
+  SIDE_LEFT
+  SIDE_RIGHT
+  INTERIOR
+  FLOOR_PLAN
+}
+
+enum ImageLayerType {
+  BASE
+  SIDING_MASK
+  ROOF_MASK
+  SHADOW
+}
