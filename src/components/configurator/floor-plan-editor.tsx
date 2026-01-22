@@ -277,22 +277,24 @@ export function FloorPlanEditor() {
         )}
       </div>
 
-      {/* Instruction banner */}
-      <AnimatePresence>
-        {addMode && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className={cn(
-              "rounded-xl p-3 text-sm font-medium",
-              addMode === 'door' ? "bg-amber-100 text-amber-800" : "bg-sky-100 text-sky-800"
-            )}
-          >
-            Click on any wall to place your {addMode}. The {addMode} will appear where you click.
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Instruction banner - fixed height to prevent layout shift */}
+      <div className="h-11">
+        <AnimatePresence>
+          {addMode && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className={cn(
+                "rounded-xl p-3 text-sm font-medium",
+                addMode === 'door' ? "bg-amber-100 text-amber-800" : "bg-sky-100 text-sky-800"
+              )}
+            >
+              Click on any wall to place your {addMode}. The {addMode} will appear where you click.
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
 
       {/* SVG Floor Plan - larger and more prominent */}
       <div className="relative">

@@ -12,6 +12,7 @@ import type {
   DoorPlacement,
   WindowPlacement,
   WallPosition,
+  EditMode3D,
 } from '@/types/configurator'
 
 const initialState: ConfiguratorState = {
@@ -37,6 +38,10 @@ const initialState: ConfiguratorState = {
   activeSection: 'size',
   isLoading: true,
   currentStep: 0,
+
+  // 3D Editor state
+  editMode3D: 'view',
+  selectedItemId: null,
 }
 
 export const useConfiguratorStore = create<ConfiguratorState & ConfiguratorActions>()(
@@ -165,6 +170,41 @@ export const useConfiguratorStore = create<ConfiguratorState & ConfiguratorActio
       prevStep: () => {
         const { currentStep } = get()
         set({ currentStep: Math.max(currentStep - 1, 0) })
+      },
+
+      setEditMode3D: (mode: EditMode3D) => {
+        set({ editMode3D: mode, selectedItemId: null })
+      },
+
+      setSelectedItemId: (id: string | null) => {
+        set({ selectedItemId: id })
+      },
+
+      selectNearestSize: (targetWidth: number, targetDepth: number) => {
+        const { sizes, doors, windows } = get()
+        if (sizes.length === 0) return
+
+        // Find the nearest size by Euclidean distance
+        let nearest = sizes[0]
+        let minDistance = Infinity
+
+        for (const size of sizes) {
+          const distance = Math.sqrt(
+            Math.pow(size.widthFeet - targetWidth, 2) +
+            Math.pow(size.depthFeet - targetDepth, 2)
+          )
+          if (distance < minDistance) {
+            minDistance = distance
+            nearest = size
+          }
+        }
+
+        // Trim doors/windows if new size has lower limits
+        set({
+          selectedSize: nearest,
+          doors: doors.slice(0, nearest.maxDoors),
+          windows: windows.slice(0, nearest.maxWindows),
+        })
       },
 
       reset: () => {

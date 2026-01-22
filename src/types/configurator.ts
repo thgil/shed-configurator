@@ -1,6 +1,7 @@
 export type RoofStyle = 'GABLE' | 'BARN' | 'LEAN_TO'
 export type WallPosition = 'FRONT' | 'BACK' | 'LEFT' | 'RIGHT'
 export type DoorType = 'SINGLE_ENTRY' | 'DOUBLE_ENTRY' | 'BARN_DOOR' | 'ROLL_UP' | 'SLIDING'
+export type EditMode3D = 'view' | 'add-door' | 'add-window' | 'resize'
 
 export interface ShedModel {
   id: string
@@ -106,6 +107,10 @@ export interface ConfiguratorState {
   activeSection: string
   isLoading: boolean
   currentStep: number
+
+  // 3D Editor state
+  editMode3D: EditMode3D
+  selectedItemId: string | null  // door or window id
 }
 
 export interface ConfiguratorActions {
@@ -134,6 +139,11 @@ export interface ConfiguratorActions {
   setCurrentStep: (step: number) => void
   nextStep: () => void
   prevStep: () => void
+
+  // 3D Editor
+  setEditMode3D: (mode: EditMode3D) => void
+  setSelectedItemId: (id: string | null) => void
+  selectNearestSize: (targetWidth: number, targetDepth: number) => void
 
   // Reset
   reset: () => void

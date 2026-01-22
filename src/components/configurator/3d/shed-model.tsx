@@ -3,10 +3,23 @@
 import { useConfiguratorStore } from '@/stores/configurator'
 import { Walls } from './walls'
 import { Roof } from './roof'
-import { Door } from './door'
-import { Window } from './window'
+import {
+  InteractiveDoor,
+  InteractiveWindow,
+  ClickableWall,
+  ResizeHandles,
+  RoofPicker,
+} from './interactive'
+import type { WallPosition } from '@/types/configurator'
 
-export function ShedModel() {
+interface ShedModelProps {
+  onDragStart?: () => void
+  onDragEnd?: () => void
+}
+
+const WALL_POSITIONS: WallPosition[] = ['FRONT', 'BACK', 'LEFT', 'RIGHT']
+
+export function ShedModel({ onDragStart, onDragEnd }: ShedModelProps) {
   const {
     selectedModel,
     selectedSize,
@@ -34,6 +47,15 @@ export function ShedModel() {
         color={sidingColor}
       />
 
+      {/* Clickable wall overlays for add mode */}
+      {selectedSize && WALL_POSITIONS.map((wall) => (
+        <ClickableWall
+          key={wall}
+          wall={wall}
+          size={selectedSize}
+        />
+      ))}
+
       {/* Roof */}
       <Roof
         roofStyle={roofStyle}
@@ -43,15 +65,38 @@ export function ShedModel() {
         color={roofColor}
       />
 
-      {/* Doors */}
+      {/* Roof style picker */}
+      <RoofPicker heightFeet={heightFeet} />
+
+      {/* Interactive Doors */}
       {selectedSize && doors.map((door) => (
-        <Door key={door.id} door={door} size={selectedSize} />
+        <InteractiveDoor
+          key={door.id}
+          door={door}
+          size={selectedSize}
+          onDragStart={onDragStart}
+          onDragEnd={onDragEnd}
+        />
       ))}
 
-      {/* Windows */}
+      {/* Interactive Windows */}
       {selectedSize && windows.map((window) => (
-        <Window key={window.id} window={window} size={selectedSize} />
+        <InteractiveWindow
+          key={window.id}
+          window={window}
+          size={selectedSize}
+          onDragStart={onDragStart}
+          onDragEnd={onDragEnd}
+        />
       ))}
+
+      {/* Resize handles */}
+      <ResizeHandles
+        widthFeet={widthFeet}
+        depthFeet={depthFeet}
+        onDragStart={onDragStart}
+        onDragEnd={onDragEnd}
+      />
     </group>
   )
 }

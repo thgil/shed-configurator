@@ -1,12 +1,13 @@
 'use client'
 
-import { Suspense } from 'react'
+import { Suspense, useState, useCallback, useEffect } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls, Environment, ContactShadows, Sky } from '@react-three/drei'
 import { useConfiguratorStore } from '@/stores/configurator'
 import { cn } from '@/lib/utils'
 import { ShedModel } from './shed-model'
 import { Ground } from './ground'
+import { EditModeToolbar } from './interactive'
 
 interface Shed3DViewProps {
   className?: string
@@ -60,7 +61,40 @@ function LoadingPlaceholder() {
 }
 
 export function Shed3DView({ className }: Shed3DViewProps) {
-  const { selectedModel, selectedSize } = useConfiguratorStore()
+  const { selectedModel, selectedSize, selectedItemId, removeDoor, removeWindow, doors, windows, setSelectedItemId } = useConfiguratorStore()
+  const [isDragging, setIsDragging] = useState(false)
+
+  const handleDragStart = useCallback(() => {
+    setIsDragging(true)
+  }, [])
+
+  const handleDragEnd = useCallback(() => {
+    setIsDragging(false)
+  }, [])
+
+  // Handle Delete key press for removing selected items
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (!selectedItemId) return
+
+        // Check if it's a door or window
+        const isDoor = doors.some(d => d.id === selectedItemId)
+        const isWindow = windows.some(w => w.id === selectedItemId)
+
+        if (isDoor) {
+          removeDoor(selectedItemId)
+          setSelectedItemId(null)
+        } else if (isWindow) {
+          removeWindow(selectedItemId)
+          setSelectedItemId(null)
+        }
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [selectedItemId, doors, windows, removeDoor, removeWindow, setSelectedItemId])
 
   return (
     <div className={cn("rounded-2xl overflow-hidden bg-stone-100", className)}>
@@ -95,8 +129,9 @@ export function Shed3DView({ className }: Shed3DViewProps) {
           {/* Environment for reflections */}
           <Environment preset="city" />
 
-          {/* Controls */}
+          {/* Controls - disabled during drag */}
           <OrbitControls
+            enabled={!isDragging}
             enablePan={false}
             minDistance={12}
             maxDistance={35}
@@ -109,7 +144,7 @@ export function Shed3DView({ className }: Shed3DViewProps) {
 
           {/* Scene */}
           <Suspense fallback={<LoadingPlaceholder />}>
-            <ShedModel />
+            <ShedModel onDragStart={handleDragStart} onDragEnd={handleDragEnd} />
             <Ground />
 
             {/* Contact shadows for grounding */}
@@ -158,6 +193,11 @@ export function Shed3DView({ className }: Shed3DViewProps) {
             </div>
           </div>
         )}
+
+        {/* Edit mode toolbar - top right */}
+        <div className="absolute top-4 right-4">
+          <EditModeToolbar />
+        </div>
       </div>
     </div>
   )

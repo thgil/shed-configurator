@@ -252,6 +252,45 @@ export interface WindowPosition3D {
   height: number
 }
 
+/**
+ * Convert a world position to an offset percentage along a wall
+ */
+export function worldPositionToOffsetPercent(
+  worldX: number,
+  worldZ: number,
+  wall: WallPosition,
+  size: ShedSize,
+  itemWidthFeet: number
+): number {
+  const wallLength = (wall === 'FRONT' || wall === 'BACK')
+    ? size.widthFeet
+    : size.depthFeet
+
+  // Extract position along wall axis (matching getDoorPosition/getWindowPosition)
+  let localPos: number
+  switch (wall) {
+    case 'FRONT':
+      localPos = worldX
+      break
+    case 'BACK':
+      localPos = worldX  // NOT negated - getDoorPosition handles the flip
+      break
+    case 'LEFT':
+      localPos = worldZ  // NOT negated
+      break
+    case 'RIGHT':
+      localPos = worldZ
+      break
+  }
+
+  // Convert to offset percentage
+  const usableLength = wallLength - itemWidthFeet
+  const offset = ((localPos + usableLength / 2) / usableLength) * 100
+
+  // Clamp to valid range
+  return Math.max(0, Math.min(100, offset))
+}
+
 export function getWindowPosition(
   window: WindowPlacement,
   size: ShedSize
