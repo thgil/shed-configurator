@@ -87,12 +87,12 @@ export function InteractiveWindow({ window, size, onDragStart, onDragEnd }: Inte
       onDragEnd?.()
     }
 
-    window.addEventListener('pointermove', handleWindowMove)
-    window.addEventListener('pointerup', handleWindowUp)
+    globalThis.addEventListener('pointermove', handleWindowMove)
+    globalThis.addEventListener('pointerup', handleWindowUp)
 
     return () => {
-      window.removeEventListener('pointermove', handleWindowMove)
-      window.removeEventListener('pointerup', handleWindowUp)
+      globalThis.removeEventListener('pointermove', handleWindowMove)
+      globalThis.removeEventListener('pointerup', handleWindowUp)
     }
   }, [isDragging, gl, camera, wallPlane, window, size, updateWindow, onDragEnd])
 
