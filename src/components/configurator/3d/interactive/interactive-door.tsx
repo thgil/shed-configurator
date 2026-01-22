@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useCallback, useMemo } from 'react'
+import { useState, useRef, useCallback, useMemo, useEffect } from 'react'
 import { useThree, ThreeEvent } from '@react-three/fiber'
 import * as THREE from 'three'
 import type { DoorPlacement, ShedSize } from '@/types/configurator'
@@ -54,49 +54,55 @@ export function InteractiveDoor({ door, size, onDragStart, onDragEnd }: Interact
     }
   }, [door.wall, size])
 
+  // Use window-level events for reliable drag tracking
+  useEffect(() => {
+    if (!isDragging) return
+
+    const handleWindowMove = (e: PointerEvent) => {
+      const rect = gl.domElement.getBoundingClientRect()
+      const pointer = new THREE.Vector2(
+        ((e.clientX - rect.left) / rect.width) * 2 - 1,
+        -((e.clientY - rect.top) / rect.height) * 2 + 1
+      )
+
+      const raycaster = new THREE.Raycaster()
+      raycaster.setFromCamera(pointer, camera)
+
+      const intersection = new THREE.Vector3()
+      if (raycaster.ray.intersectPlane(wallPlane, intersection)) {
+        const doorWidthFeet = (door.option?.widthInches ?? 36) / 12
+        const newOffset = worldPositionToOffsetPercent(
+          intersection.x,
+          intersection.z,
+          door.wall,
+          size,
+          doorWidthFeet
+        )
+        updateDoor(door.id, { offsetPercent: newOffset })
+      }
+    }
+
+    const handleWindowUp = () => {
+      setIsDragging(false)
+      onDragEnd?.()
+    }
+
+    window.addEventListener('pointermove', handleWindowMove)
+    window.addEventListener('pointerup', handleWindowUp)
+
+    return () => {
+      window.removeEventListener('pointermove', handleWindowMove)
+      window.removeEventListener('pointerup', handleWindowUp)
+    }
+  }, [isDragging, gl, camera, wallPlane, door, size, updateDoor, onDragEnd])
+
   const handlePointerDown = useCallback((e: ThreeEvent<PointerEvent>) => {
-    e.stopPropagation()  // ALWAYS stop propagation first
+    e.stopPropagation()
     if (!isInteractive) return
     setIsDragging(true)
     setSelectedItemId(door.id)
     onDragStart?.()
-    ;(e.nativeEvent.target as HTMLElement)?.setPointerCapture?.(e.nativeEvent.pointerId)
   }, [isInteractive, door.id, setSelectedItemId, onDragStart])
-
-  const handlePointerMove = useCallback((e: ThreeEvent<PointerEvent>) => {
-    if (!isDragging || !isInteractive) return
-    e.stopPropagation()
-
-    // Raycast to wall plane
-    const raycaster = new THREE.Raycaster()
-    const rect = gl.domElement.getBoundingClientRect()
-    const pointer = new THREE.Vector2(
-      ((e.nativeEvent.clientX - rect.left) / rect.width) * 2 - 1,
-      -((e.nativeEvent.clientY - rect.top) / rect.height) * 2 + 1
-    )
-    raycaster.setFromCamera(pointer, camera)
-
-    const intersection = new THREE.Vector3()
-    if (raycaster.ray.intersectPlane(wallPlane, intersection)) {
-      const doorWidthFeet = (door.option?.widthInches ?? 36) / 12
-      const newOffset = worldPositionToOffsetPercent(
-        intersection.x,
-        intersection.z,
-        door.wall,
-        size,
-        doorWidthFeet
-      )
-      updateDoor(door.id, { offsetPercent: newOffset })
-    }
-  }, [isDragging, isInteractive, gl, camera, wallPlane, door, size, updateDoor])
-
-  const handlePointerUp = useCallback((e: ThreeEvent<PointerEvent>) => {
-    if (!isDragging) return
-    e.stopPropagation()
-    setIsDragging(false)
-    onDragEnd?.()
-    ;(e.nativeEvent.target as HTMLElement)?.releasePointerCapture?.(e.nativeEvent.pointerId)
-  }, [isDragging, onDragEnd])
 
   const handleClick = useCallback((e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation()  // ALWAYS stop propagation first
@@ -110,10 +116,8 @@ export function InteractiveDoor({ door, size, onDragStart, onDragEnd }: Interact
       position={position}
       rotation={rotation}
       onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}
-      onPointerUp={handlePointerUp}
       onPointerEnter={() => isInteractive && setIsHovered(true)}
-      onPointerLeave={() => setIsHovered(false)}
+      onPointerLeave={() => !isDragging && setIsHovered(false)}
       onClick={handleClick}
     >
       {/* Selection outline */}

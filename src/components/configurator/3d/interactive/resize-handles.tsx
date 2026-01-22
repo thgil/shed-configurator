@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useMemo, useRef } from 'react'
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import { useThree, useFrame, ThreeEvent } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useConfiguratorStore } from '@/stores/configurator'
@@ -44,8 +44,66 @@ function ResizeHandle({ corner, widthFeet, depthFeet, onDragStart, onDragEnd }: 
     meshRef.current.scale.lerp(new THREE.Vector3(scale, scale, scale), 0.15)
   })
 
+  // Use window-level events for reliable drag tracking
+  useEffect(() => {
+    if (!isDragging) return
+
+    const handleWindowMove = (e: PointerEvent) => {
+      if (!dragStart.current) return
+
+      const rect = gl.domElement.getBoundingClientRect()
+      const pointer = new THREE.Vector2(
+        ((e.clientX - rect.left) / rect.width) * 2 - 1,
+        -((e.clientY - rect.top) / rect.height) * 2 + 1
+      )
+
+      const raycaster = new THREE.Raycaster()
+      raycaster.setFromCamera(pointer, camera)
+      const intersection = new THREE.Vector3()
+
+      if (raycaster.ray.intersectPlane(groundPlane, intersection)) {
+        const deltaX = intersection.x - dragStart.current.x
+        const deltaZ = intersection.z - dragStart.current.z
+
+        let newWidth = dragStart.current.width
+        let newDepth = dragStart.current.depth
+
+        if (corner.includes('E')) {
+          newWidth = dragStart.current.width + deltaX * 2
+        } else {
+          newWidth = dragStart.current.width - deltaX * 2
+        }
+
+        if (corner.includes('S')) {
+          newDepth = dragStart.current.depth + deltaZ * 2
+        } else {
+          newDepth = dragStart.current.depth - deltaZ * 2
+        }
+
+        newWidth = Math.max(6, Math.min(20, newWidth))
+        newDepth = Math.max(6, Math.min(20, newDepth))
+
+        selectNearestSize(newWidth, newDepth)
+      }
+    }
+
+    const handleWindowUp = () => {
+      setIsDragging(false)
+      dragStart.current = null
+      onDragEnd?.()
+    }
+
+    window.addEventListener('pointermove', handleWindowMove)
+    window.addEventListener('pointerup', handleWindowUp)
+
+    return () => {
+      window.removeEventListener('pointermove', handleWindowMove)
+      window.removeEventListener('pointerup', handleWindowUp)
+    }
+  }, [isDragging, gl, camera, groundPlane, corner, selectNearestSize, onDragEnd])
+
   const handlePointerDown = useCallback((e: ThreeEvent<PointerEvent>) => {
-    e.stopPropagation()  // ALWAYS stop propagation first
+    e.stopPropagation()
     if (!isActive) return
     setIsDragging(true)
     onDragStart?.()
@@ -67,61 +125,7 @@ function ResizeHandle({ corner, widthFeet, depthFeet, onDragStart, onDragEnd }: 
         depth: depthFeet,
       }
     }
-
-    ;(e.nativeEvent.target as HTMLElement)?.setPointerCapture?.(e.nativeEvent.pointerId)
   }, [isActive, gl, camera, groundPlane, widthFeet, depthFeet, onDragStart])
-
-  const handlePointerMove = useCallback((e: ThreeEvent<PointerEvent>) => {
-    if (!isDragging || !isActive || !dragStart.current) return
-    e.stopPropagation()
-
-    // Raycast to ground plane
-    const raycaster = new THREE.Raycaster()
-    const rect = gl.domElement.getBoundingClientRect()
-    const pointer = new THREE.Vector2(
-      ((e.nativeEvent.clientX - rect.left) / rect.width) * 2 - 1,
-      -((e.nativeEvent.clientY - rect.top) / rect.height) * 2 + 1
-    )
-    raycaster.setFromCamera(pointer, camera)
-    const intersection = new THREE.Vector3()
-
-    if (raycaster.ray.intersectPlane(groundPlane, intersection)) {
-      const deltaX = intersection.x - dragStart.current.x
-      const deltaZ = intersection.z - dragStart.current.z
-
-      // Calculate new dimensions based on which corner is being dragged
-      let newWidth = dragStart.current.width
-      let newDepth = dragStart.current.depth
-
-      if (corner.includes('E')) {
-        newWidth = dragStart.current.width + deltaX * 2
-      } else {
-        newWidth = dragStart.current.width - deltaX * 2
-      }
-
-      if (corner.includes('S')) {
-        newDepth = dragStart.current.depth + deltaZ * 2
-      } else {
-        newDepth = dragStart.current.depth - deltaZ * 2
-      }
-
-      // Clamp to reasonable bounds
-      newWidth = Math.max(6, Math.min(20, newWidth))
-      newDepth = Math.max(6, Math.min(20, newDepth))
-
-      // Snap to nearest predefined size
-      selectNearestSize(newWidth, newDepth)
-    }
-  }, [isDragging, isActive, gl, camera, groundPlane, corner, selectNearestSize])
-
-  const handlePointerUp = useCallback((e: ThreeEvent<PointerEvent>) => {
-    if (!isDragging) return
-    e.stopPropagation()
-    setIsDragging(false)
-    dragStart.current = null
-    onDragEnd?.()
-    ;(e.nativeEvent.target as HTMLElement)?.releasePointerCapture?.(e.nativeEvent.pointerId)
-  }, [isDragging, onDragEnd])
 
   if (!isActive) return null
 
@@ -130,10 +134,8 @@ function ResizeHandle({ corner, widthFeet, depthFeet, onDragStart, onDragEnd }: 
       ref={meshRef}
       position={position}
       onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}
-      onPointerUp={handlePointerUp}
       onPointerEnter={() => setIsHovered(true)}
-      onPointerLeave={() => setIsHovered(false)}
+      onPointerLeave={() => !isDragging && setIsHovered(false)}
     >
       <sphereGeometry args={[0.4, 16, 16]} />
       <meshStandardMaterial
