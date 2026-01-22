@@ -273,10 +273,10 @@ export function worldPositionToOffsetPercent(
       localPos = worldX
       break
     case 'BACK':
-      localPos = worldX  // NOT negated - getDoorPosition handles the flip
+      localPos = -worldX  // Negate to match getDoorPosition's negation
       break
     case 'LEFT':
-      localPos = worldZ  // NOT negated
+      localPos = -worldZ  // Negate to match getDoorPosition's negation
       break
     case 'RIGHT':
       localPos = worldZ

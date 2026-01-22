@@ -69,9 +69,10 @@ export function InteractiveWindow({ window, size, onDragStart, onDragEnd }: Inte
 
     // Raycast to wall plane
     const raycaster = new THREE.Raycaster()
+    const rect = gl.domElement.getBoundingClientRect()
     const pointer = new THREE.Vector2(
-      (e.nativeEvent.clientX / gl.domElement.clientWidth) * 2 - 1,
-      -(e.nativeEvent.clientY / gl.domElement.clientHeight) * 2 + 1
+      ((e.nativeEvent.clientX - rect.left) / rect.width) * 2 - 1,
+      -((e.nativeEvent.clientY - rect.top) / rect.height) * 2 + 1
     )
     raycaster.setFromCamera(pointer, camera)
 
