@@ -126,9 +126,16 @@ function CompactSizeSelector() {
   const { sizes, selectedSize, selectSize } = useConfiguratorStore()
 
   return (
-    <div className="bg-white rounded-xl border border-stone-200 p-4">
-      <h3 className="text-sm font-medium text-stone-500 uppercase tracking-wide mb-3">Size</h3>
-      <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+    <div className="bg-white rounded-xl border border-stone-200 p-3">
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-xs font-medium text-stone-500 uppercase tracking-wide">Size</h3>
+        {selectedSize && (
+          <span className="text-xs text-stone-500">
+            {selectedSize.widthFeet}' W × {selectedSize.depthFeet}' D × {selectedSize.heightFeet}' H · {selectedSize.widthFeet * selectedSize.depthFeet} sq ft
+          </span>
+        )}
+      </div>
+      <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
         {sizes.map((size) => {
           const isSelected = selectedSize?.id === size.id
 
@@ -137,7 +144,7 @@ function CompactSizeSelector() {
               key={size.id}
               onClick={() => selectSize(size)}
               className={cn(
-                "relative p-3 rounded-lg transition-all duration-200 text-center",
+                "relative py-2 px-1 rounded-lg transition-all duration-200 text-center",
                 "focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-1",
                 isSelected
                   ? "bg-amber-600 text-white shadow-md"
@@ -147,7 +154,7 @@ function CompactSizeSelector() {
               <div className="text-sm font-bold">{size.displayName}</div>
               {size.priceModifier > 0 && (
                 <div className={cn(
-                  "text-xs mt-1",
+                  "text-xs",
                   isSelected ? "text-amber-100" : "text-stone-500"
                 )}>
                   +{formatPriceDecimal(size.priceModifier)}
@@ -157,61 +164,22 @@ function CompactSizeSelector() {
           )
         })}
       </div>
-
-      {/* Size details */}
-      {selectedSize && (
-        <div className="mt-4 pt-4 border-t border-stone-200 flex justify-between text-sm text-stone-600">
-          <span>{selectedSize.widthFeet}' W x {selectedSize.depthFeet}' D x {selectedSize.heightFeet}' H</span>
-          <span>{selectedSize.widthFeet * selectedSize.depthFeet} sq ft</span>
-        </div>
-      )}
     </div>
   )
 }
 
 export function DesignPhase() {
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h2 className="text-2xl font-bold text-stone-900">Design Your Shed</h2>
-        <p className="text-stone-600 mt-1">
-          Choose your style, select the size, and place doors and windows on the floor plan.
-        </p>
-      </div>
-
-      {/* Style & Size selectors in a row on larger screens */}
-      <div className="grid md:grid-cols-2 gap-4">
+    <div className="space-y-3">
+      {/* Style & Size selectors side by side */}
+      <div className="grid md:grid-cols-[1fr,1.5fr] gap-3">
         <CompactStyleSelector />
-        <div className="md:hidden">
-          <CompactSizeSelector />
-        </div>
-      </div>
-
-      {/* Size selector - visible on md+ */}
-      <div className="hidden md:block">
         <CompactSizeSelector />
       </div>
 
-      {/* Floor Plan - The star of the show */}
-      <div className="bg-white rounded-xl border border-stone-200 p-4 md:p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h3 className="text-lg font-semibold text-stone-900">Floor Plan Layout</h3>
-            <p className="text-sm text-stone-500">Click walls to add doors and windows, drag to reposition</p>
-          </div>
-        </div>
+      {/* Floor Plan */}
+      <div className="bg-white rounded-xl border border-stone-200 p-3">
         <FloorPlanEditor />
-      </div>
-
-      {/* Helper tips */}
-      <div className="bg-amber-50 rounded-xl border border-amber-200 p-4">
-        <h4 className="font-medium text-amber-900 mb-2">Design Tips</h4>
-        <ul className="text-sm text-amber-800 space-y-1">
-          <li>- Position your main door on the wall facing your most common approach</li>
-          <li>- Add windows on walls that will receive natural light</li>
-          <li>- Consider interior storage needs when placing openings</li>
-        </ul>
       </div>
     </div>
   )

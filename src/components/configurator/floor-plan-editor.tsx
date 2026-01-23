@@ -217,26 +217,25 @@ export function FloorPlanEditor() {
   }
 
   return (
-    <div className="space-y-4">
-      {/* Add buttons - more prominent */}
-      <div className="flex flex-wrap gap-3">
+    <div className="space-y-2">
+      {/* Add buttons row */}
+      <div className="flex flex-wrap items-center gap-2">
         <button
           onClick={() => setAddMode(addMode === 'door' ? null : 'door')}
           disabled={doors.length >= maxDoors}
           className={cn(
-            "flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-xl transition-all",
+            "flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg transition-all",
             addMode === 'door'
-              ? "bg-amber-500 text-white shadow-lg ring-2 ring-amber-500 ring-offset-2"
+              ? "bg-amber-500 text-white shadow-md ring-2 ring-amber-500 ring-offset-1"
               : doors.length >= maxDoors
                 ? "bg-stone-100 text-stone-400 cursor-not-allowed"
                 : "bg-stone-100 text-stone-700 hover:bg-amber-100 hover:text-amber-700"
           )}
         >
-          <Plus className="w-4 h-4" />
           <DoorOpen className="w-4 h-4" />
-          Add Door
+          Door
           <span className={cn(
-            "px-2 py-0.5 rounded-full text-xs",
+            "px-1.5 py-0.5 rounded text-xs",
             addMode === 'door' ? "bg-amber-400" : "bg-stone-200"
           )}>
             {doors.length}/{maxDoors}
@@ -247,19 +246,18 @@ export function FloorPlanEditor() {
           onClick={() => setAddMode(addMode === 'window' ? null : 'window')}
           disabled={windows.length >= maxWindows}
           className={cn(
-            "flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-xl transition-all",
+            "flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg transition-all",
             addMode === 'window'
-              ? "bg-sky-500 text-white shadow-lg ring-2 ring-sky-500 ring-offset-2"
+              ? "bg-sky-500 text-white shadow-md ring-2 ring-sky-500 ring-offset-1"
               : windows.length >= maxWindows
                 ? "bg-stone-100 text-stone-400 cursor-not-allowed"
                 : "bg-stone-100 text-stone-700 hover:bg-sky-100 hover:text-sky-700"
           )}
         >
-          <Plus className="w-4 h-4" />
           <Grid3X3 className="w-4 h-4" />
-          Add Window
+          Window
           <span className={cn(
-            "px-2 py-0.5 rounded-full text-xs",
+            "px-1.5 py-0.5 rounded text-xs",
             addMode === 'window' ? "bg-sky-400" : "bg-stone-200"
           )}>
             {windows.length}/{maxWindows}
@@ -269,40 +267,30 @@ export function FloorPlanEditor() {
         {selectedItem && (
           <button
             onClick={handleDelete}
-            className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-xl bg-red-100 text-red-700 hover:bg-red-200 transition-all ml-auto"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg bg-red-100 text-red-700 hover:bg-red-200 transition-all ml-auto"
           >
             <Trash2 className="w-4 h-4" />
-            Delete Selected
+            Delete
           </button>
+        )}
+
+        {addMode && (
+          <span className={cn(
+            "text-xs ml-auto",
+            addMode === 'door' ? "text-amber-600" : "text-sky-600"
+          )}>
+            Click a wall to place
+          </span>
         )}
       </div>
 
-      {/* Instruction banner - fixed height to prevent layout shift */}
-      <div className="h-11">
-        <AnimatePresence>
-          {addMode && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className={cn(
-                "rounded-xl p-3 text-sm font-medium",
-                addMode === 'door' ? "bg-amber-100 text-amber-800" : "bg-sky-100 text-sky-800"
-              )}
-            >
-              Click on any wall to place your {addMode}. The {addMode} will appear where you click.
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-
-      {/* SVG Floor Plan - larger and more prominent */}
+      {/* SVG Floor Plan */}
       <div className="relative">
         <svg
           ref={svgRef}
           viewBox={`0 0 ${FLOOR_PLAN_SIZE} ${FLOOR_PLAN_SIZE}`}
-          className="w-full max-w-lg mx-auto bg-gradient-to-br from-stone-50 to-stone-100 rounded-xl shadow-inner"
-          style={{ minHeight: '350px' }}
+          className="w-full max-w-md mx-auto bg-gradient-to-br from-stone-50 to-stone-100 rounded-lg shadow-inner"
+          style={{ minHeight: '280px' }}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseUp}
@@ -573,25 +561,6 @@ export function FloorPlanEditor() {
         )}
       </div>
 
-      {/* Legend */}
-      <div className="flex justify-center gap-8 text-sm text-stone-600">
-        <div className="flex items-center gap-2">
-          <div className="w-5 h-4 bg-amber-500 rounded shadow-sm" />
-          <span>Door</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-5 h-4 bg-sky-400 rounded shadow-sm" />
-          <span>Window</span>
-        </div>
-      </div>
-
-      {/* Instructions */}
-      <p className="text-xs text-stone-400 text-center">
-        {selectedItem
-          ? 'Press Delete key or click the Delete button to remove selected item'
-          : 'Click an item to select it, then drag to reposition'
-        }
-      </p>
     </div>
   )
 }
